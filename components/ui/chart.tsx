@@ -18,6 +18,8 @@ export type ChartConfig = {
   )
 }
 
+
+
 type ChartContextProps = {
   config: ChartConfig
 }
@@ -38,6 +40,10 @@ const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
     config: ChartConfig
+    data?: any[]
+    xAxisKey?: string
+    yAxisKey?: string
+    margin?: { top: number; right: number; bottom: number; left: number }
     children: React.ComponentProps<
       typeof RechartsPrimitive.ResponsiveContainer
     >["children"]
@@ -66,6 +72,46 @@ const ChartContainer = React.forwardRef<
   )
 })
 ChartContainer.displayName = "Chart"
+
+// const ChartContainer = React.forwardRef<
+//   HTMLDivElement,
+//   React.ComponentProps<"div"> & {
+//     config: ChartConfig
+//     data?: any[]
+//     xAxisKey?: string
+//     yAxisKey?: string
+//     margin?: { top: number; right: number; bottom: number; left: number }
+//     children: React.ComponentProps<
+//       typeof RechartsPrimitive.ResponsiveContainer
+//     >["children"]
+//   }
+// >(({ id, className, children, config, data, xAxisKey, yAxisKey, margin, ...props }, ref) => {
+//   const uniqueId = React.useId()
+//   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+
+//   return (
+//     <ChartContext.Provider value={{ config }}>
+//       <div
+//         data-chart={chartId}
+//         ref={ref}
+//         className={cn(
+//           "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
+//           className
+//         )}
+//         {...props}
+//       >
+//         <ChartStyle id={chartId} config={config} />
+//         <RechartsPrimitive.ResponsiveContainer>
+//           {children}
+//         </RechartsPrimitive.ResponsiveContainer>
+//       </div>
+//     </ChartContext.Provider>
+//   )
+// })
+// ChartContainer.displayName = "Chart"
+
+
+
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
@@ -354,6 +400,64 @@ function getPayloadConfigFromPayload(
     ? config[configLabelKey]
     : config[key as keyof typeof config]
 }
+
+
+interface ChartLineProps {
+  name: string
+  dataKey: string
+  stroke: string
+  strokeWidth: number
+}
+
+export const ChartLine = ({ name, dataKey, stroke, strokeWidth }: ChartLineProps) => {
+  return <RechartsPrimitive.Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={strokeWidth} />
+}
+
+export const ChartXAxis = () => {
+  return <RechartsPrimitive.XAxis dataKey="name" stroke="#8884d8" />
+}
+
+export const ChartYAxis = () => {
+  return <RechartsPrimitive.YAxis stroke="#8884d8" />
+}
+
+interface ChartAreaProps {
+  dataKey: string
+  fill: string
+  fillOpacity: number
+  stroke: string
+  strokeWidth: number
+}
+
+export const ChartArea = ({ dataKey, fill, fillOpacity, stroke, strokeWidth }: ChartAreaProps) => {
+  return (
+    <RechartsPrimitive.Area type="monotone" dataKey={dataKey} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeWidth} />
+  )
+}
+
+interface ChartBarProps {
+  dataKey: string
+  fill: string
+}
+
+export const ChartBar = ({ dataKey, fill }: ChartBarProps) => {
+  return <RechartsPrimitive.Bar dataKey={dataKey} fill={fill} />
+}
+
+interface ChartLegendItemProps {
+  name: string
+  color: string
+}
+
+export const ChartLegendItem = ({ name, color }: ChartLegendItemProps) => {
+  return (
+    <div className="chart-legend-item">
+      <span style={{ backgroundColor: color }} className="h-2 w-2 inline-block rounded-full"></span>
+      {name}
+    </div>
+  )
+}
+
 
 export {
   ChartContainer,

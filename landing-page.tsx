@@ -21,6 +21,9 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+// import LoginRegisterModal from "./login-registre";
+import { AuthModal } from "@/components/auth/auth-modal"
+
 // Animation variants
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -49,6 +52,8 @@ const fadeInScale = {
 export default function Home() {
   const [scrollY, setScrollY] = useState(0)
 
+  // Add this new state for the modal
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY)
@@ -60,14 +65,22 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background overflow-hidden" dir="rtl">
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
       {/* Header */}
       <header
         className={`sticky top-0 z-50 py-4 px-4 transition-all duration-300 ${scrollY > 50 ? "bg-white shadow-md" : "bg-transparent"}`}
       >
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link
+            {/* <Link
               href="#"
+              className="bg-primary hover:bg-primary/90 transition-colors duration-300 rounded-full px-6 py-2 text-black font-medium flex items-center gap-2 shadow-md hover:shadow-lg"
+            > */}
+            <button
+              onClick={() => setIsAuthModalOpen(true)} // Modified to open modal
               className="bg-primary hover:bg-primary/90 transition-colors duration-300 rounded-full px-6 py-2 text-black font-medium flex items-center gap-2 shadow-md hover:shadow-lg"
             >
               <span>تسجيل الدخول</span>
@@ -86,7 +99,7 @@ export default function Home() {
                 <path d="M5 12h14" />
                 <path d="m12 5 7 7-7 7" />
               </svg>
-            </Link>
+            </button>
             <button className="bg-primary-foreground hover:bg-primary-foreground/90 transition-colors duration-300 rounded-full p-3 shadow-md hover:shadow-lg">
               <Search className="h-5 w-5 text-white" />
             </button>

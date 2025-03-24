@@ -39,7 +39,7 @@ export default function LandingPage() {
       weight: "70 kg",
       sellerRating: 4.5,
       verified: true,
-      image: "/shee.jpg?height=300&width=400",
+      image: "/she.jpg?height=300&width=400",
     },
     {
       id: 3,
@@ -63,7 +63,7 @@ export default function LandingPage() {
       weight: "60 kg",
       sellerRating: 4.7,
       verified: false,
-      image: "/shee.jpg?height=300&width=400",
+      image: "/she.jpg?height=300&width=400",
     },
   ]
 
