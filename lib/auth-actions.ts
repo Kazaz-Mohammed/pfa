@@ -205,3 +205,66 @@ export async function getCurrentUser() {
   }
 }
 
+
+// export async function sendContactMessage(name: string, email: string, message: string) {
+//   const transporter = nodemailer.createTransport({
+//     host: process.env.EMAIL_SERVICE, 
+//     port: 587, 
+//     secure: false, 
+//     requireTLS: true,
+//     auth: {
+//       user: process.env.EMAIL_USER,
+//       pass: process.env.EMAIL_PASS,
+//     },
+//   });
+
+//   const mailOptions = {
+//     from: `"Contact Form" <${process.env.EMAIL_USER}>`,
+//     to: process.env.SUPPORT_EMAIL,
+//     subject: `New Contact Message from ${name}`,
+//     text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+//   };
+
+//   try {
+//     await transporter.sendMail(mailOptions);
+//     return { success: true, message: "Message sent successfully" };
+//   } catch (error) {
+//     console.error("Error sending contact email:", error);
+//     return { success: false, error: "Failed to send message" };
+//   }
+// }
+
+export async function sendContactMessage(name: string, email: string, message: string) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.SUPPORT_EMAIL) {
+    console.error("Missing email environment variables");
+    return { success: false, error: "Email configuration is missing" };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_SERVICE,
+    port: 587, // Use 465 for secure connection
+    secure: false, // Set to true if using port 465
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false, // Prevent issues with self-signed certs
+    },
+  });
+
+  const mailOptions = {
+    from: `"Contact Form" <${process.env.EMAIL_USER}>`,
+    to: process.env.SUPPORT_EMAIL,
+    subject: `New Contact Message from ${name}`,
+    text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: "Message sent successfully" };
+  } catch (error) {
+    console.error("Error sending contact email:", error);
+    return { success: false, error: "Failed to send message" };
+  }
+}

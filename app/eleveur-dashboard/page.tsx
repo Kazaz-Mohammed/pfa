@@ -45,6 +45,8 @@ import {
   ChartArea,
 } from "@/components/ui/chart"
 
+import * as RechartsPrimitive from 'recharts'
+
 export default function SellerDashboard() {
   const [language, setLanguage] = useState<"fr" | "ar">("fr")
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -57,14 +59,14 @@ export default function SellerDashboard() {
     inquiries: 38,
     sales: 12,
     revenue: 42600,
-    averagePrice: 3550,
+    averagePrice: 100,
   }
 
   const recentInquiries = [
     {
       id: 1,
       buyerName: "Ahmed Tazi",
-      buyerAvatar: "/placeholder.svg?height=40&width=40",
+      buyerAvatar: "/femal1.jpg?height=40&width=40",
       sheepId: "SCN-12345-MA",
       sheepTitle: "Sardi Male - 1.5 years",
       date: "2023-11-15",
@@ -74,7 +76,7 @@ export default function SellerDashboard() {
     {
       id: 2,
       buyerName: "Fatima Alaoui",
-      buyerAvatar: "/placeholder.svg?height=40&width=40",
+      buyerAvatar: "/femal1.jpg?height=40&width=40",
       sheepId: "SCN-12346-MA",
       sheepTitle: "Timahdite Female - 2 years",
       date: "2023-11-14",
@@ -84,7 +86,7 @@ export default function SellerDashboard() {
     {
       id: 3,
       buyerName: "Karim Benjelloun",
-      buyerAvatar: "/placeholder.svg?height=40&width=40",
+      buyerAvatar: "/femal2.jpg?height=40&width=40",
       sheepId: "SCN-12348-MA",
       sheepTitle: "Beni Guil Male - 1 year",
       date: "2023-11-13",
@@ -97,7 +99,7 @@ export default function SellerDashboard() {
     {
       id: 1,
       title: "Sardi Male - Premium Quality",
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/she.jpg?height=100&width=100",
       price: 4200,
       views: 320,
       inquiries: 15,
@@ -105,7 +107,7 @@ export default function SellerDashboard() {
     {
       id: 2,
       title: "Timahdite Female - Breeding",
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/she.jpg?height=100&width=100",
       price: 3800,
       views: 280,
       inquiries: 12,
@@ -113,7 +115,7 @@ export default function SellerDashboard() {
     {
       id: 3,
       title: "D'man Male - Young",
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/she.jpg?height=100&width=100",
       price: 2900,
       views: 210,
       inquiries: 8,
@@ -153,7 +155,7 @@ export default function SellerDashboard() {
           <div className="flex items-center gap-2">
             {sidebarOpen && (
               <Image
-                src="/placeholder.svg?height=40&width=40"
+                src="/logo-rm.png?height=40&width=40"
                 alt="Kebchi Logo"
                 width={40}
                 height={40}
@@ -161,10 +163,10 @@ export default function SellerDashboard() {
               />
             )}
             {sidebarOpen ? (
-              <h1 className="text-xl font-bold">Kebchi</h1>
+              <h1 className="text-xl font-bold">KEBCHI</h1>
             ) : (
               <Image
-                src="/placeholder.svg?height=30&width=30"
+                src="/logo-rm.png?height=30&width=30"
                 alt="Kebchi Logo"
                 width={30}
                 height={30}
@@ -235,21 +237,21 @@ export default function SellerDashboard() {
               {sidebarOpen && <span>{language === "fr" ? "Analytique" : "التحليلات"}</span>}
             </Link>
 
-            <Link
+            {/* <Link
               href="/business-tools"
               className="flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-[#0b6d40]"
             >
               <Wallet className="h-5 w-5" />
               {sidebarOpen && <span>{language === "fr" ? "Outils d'affaires" : "أدوات الأعمال"}</span>}
-            </Link>
+            </Link> */}
 
-            <Link
+            {/* <Link
               href="/profile"
               className="flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-[#0b6d40]"
             >
               <Users className="h-5 w-5" />
               {sidebarOpen && <span>{language === "fr" ? "Profil" : "الملف الشخصي"}</span>}
-            </Link>
+            </Link> */}
 
             <Link
               href="/learning"
@@ -296,7 +298,7 @@ export default function SellerDashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
+                    <AvatarImage src="/performance-review.png?height=32&width=32" alt="User" />
                     <AvatarFallback>MA</AvatarFallback>
                   </Avatar>
                   {language === "fr" ? "Mohammed Alami" : "محمد علمي"}
@@ -365,23 +367,23 @@ export default function SellerDashboard() {
             <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <ShoppingCart className="h-8 w-8 text-[#0a5c36] mb-2" />
-                <p className="text-sm text-gray-500">{language === "fr" ? "Ventes" : "المبيعات"}</p>
+                <p className="text-sm text-gray-500">{language === "fr" ? "Consulte Numero Tel" : "طلب رقم الهاتف"}</p>
                 <h3 className="text-2xl font-bold">{stats.sales}</h3>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <Wallet className="h-8 w-8 text-[#0a5c36] mb-2" />
                 <p className="text-sm text-gray-500">{language === "fr" ? "Revenus (MAD)" : "الإيرادات (درهم)"}</p>
                 <h3 className="text-2xl font-bold">{stats.revenue.toLocaleString()}</h3>
               </CardContent>
-            </Card>
+            </Card> */}
 
             <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <Tag className="h-8 w-8 text-[#0a5c36] mb-2" />
-                <p className="text-sm text-gray-500">{language === "fr" ? "Prix moyen (MAD)" : "متوسط السعر (درهم)"}</p>
+                <p className="text-sm text-gray-500">{language === "fr" ? "Nb des Moutons Verifier" : "عدد الاغنام تم التحقق منها"}</p>
                 <h3 className="text-2xl font-bold">{stats.averagePrice}</h3>
               </CardContent>
             </Card>
@@ -389,7 +391,7 @@ export default function SellerDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Market Trends */}
-            <Card className="lg:col-span-2">
+            {/* <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle>{language === "fr" ? "Tendances du marché" : "اتجاهات السوق"}</CardTitle>
                 <CardDescription>
@@ -398,7 +400,7 @@ export default function SellerDashboard() {
                     : "متوسط أسعار الأغنام خلال الـ 12 شهرًا الماضية"}
                 </CardDescription>
               </CardHeader>
-              {/* <CardContent className="h-[300px]">
+              <CardContent className="h-[300px]">
                 <ChartContainer
                   data={marketTrends}
                   xAxisKey="month"
@@ -413,8 +415,48 @@ export default function SellerDashboard() {
                     <ChartTooltipContent />
                   </ChartTooltip>
                 </ChartContainer>
-              </CardContent> */}
-            </Card>
+              </CardContent>
+            </Card> */}
+
+<Card className="lg:col-span-2">
+  <CardHeader className="pb-2">
+    <CardTitle>{language === "fr" ? "Tendances du marché" : "اتجاهات السوق"}</CardTitle>
+    <CardDescription>
+      {language === "fr"
+        ? "Prix moyen des moutons au cours des 12 derniers mois"
+        : "متوسط أسعار الأغنام خلال الـ 12 شهرًا الماضية"}
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="h-[300px]">
+    <ChartContainer
+      config={{
+        price: {
+          label: "Sheep Price",
+          color: "#0a5c36"
+        }
+      }}
+      data={marketTrends}
+      xAxisKey="month"
+      yAxisKey="value"
+      margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+    >
+      <RechartsPrimitive.ResponsiveContainer>
+        <RechartsPrimitive.LineChart data={marketTrends}>
+          <RechartsPrimitive.XAxis dataKey="month" />
+          <RechartsPrimitive.YAxis />
+          <RechartsPrimitive.Tooltip />
+          <RechartsPrimitive.Line 
+            type="monotone" 
+            dataKey="price" 
+            stroke="#0a5c36" 
+            strokeWidth={2} 
+          />
+          <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
+        </RechartsPrimitive.LineChart>
+      </RechartsPrimitive.ResponsiveContainer>
+    </ChartContainer>
+  </CardContent>
+</Card>
 
             {/* Sales by Breed */}
             <Card>

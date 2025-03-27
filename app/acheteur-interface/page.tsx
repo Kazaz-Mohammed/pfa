@@ -101,9 +101,15 @@ export default function LandingPage() {
               {language === "fr" ? "Se connecter" : "تسجيل الدخول"}
             </Button> */}
 
-            <Button variant="outline" className="border-white bg-[#499471] text-white hover:bg-[#0b6d40]">
+            {/* <Button variant="outline" className="border-white bg-[#499471] text-white hover:bg-[#0b6d40]">
               {language === "fr" ? "Verifier SCN" : "تحقق من SCN"}
-            </Button>
+            </Button> */}
+
+            <Link href="/scn-verification">
+              <Button variant="outline" className="border-white bg-[#499471] text-white hover:bg-[#0b6d40]">
+                  {language === "fr" ? "Verifier SCN" : "تحقق من SCN"}
+              </Button>
+            </Link>
           </div>
         </div>
       </header>

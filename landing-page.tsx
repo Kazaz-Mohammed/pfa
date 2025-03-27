@@ -52,8 +52,61 @@ const fadeInScale = {
 export default function Home() {
   const [scrollY, setScrollY] = useState(0)
 
+
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const testimonials = [
+    {
+      name: "فاطمة الزهراء",
+      role: "مربية أغنام",
+      quote: "المنصة توفر لنا فرصة للوصول إلى المستهلكين بشكل مباشر مما يقلل من تكاليف الوسطاء!",
+      image: "/femal1.jpg",
+      avatar: "/performance-review.png",
+      stars: 4
+    },
+    
+    {
+      name: "محمد أحمد",
+      role: "مزارع",
+      quote: "خدمة ممتازة وسهولة في التعامل مع المنصة!",
+      image: "/male1.jpg",
+      avatar: "/performance-review.png",
+      stars: 5
+    },
+
+    {
+      name: "محمد عالي",
+      role: "مزارع",
+      quote: "خدمة ممتازة وسهولة في التعامل مع المنصة!",
+      image: "/male1.jpg",
+      avatar: "/performance-review.png",
+      stars: 5
+    }
+  ];
+  const nextTestimonial = () => {
+    setCurrentTestimonialIndex((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const prevTestimonial = () => {
+    setCurrentTestimonialIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  }; 
+
   // Add this new state for the modal
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const images = [
+    "/sheep.jpg?height=500&width=700",
+    "/she.jpg?height=500&width=700",  
+  ];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY)
@@ -100,21 +153,23 @@ export default function Home() {
                 <path d="m12 5 7 7-7 7" />
               </svg>
             </button>
+            <Link href="/acheteur-interface">
             <button className="bg-primary-foreground hover:bg-primary-foreground/90 transition-colors duration-300 rounded-full p-3 shadow-md hover:shadow-lg">
               <Search className="h-5 w-5 text-white" />
             </button>
+            </Link>
           </div>
 
           <nav className="flex items-center gap-8">
             <Link
-              href="#"
+              href="/contact"
               className="flex items-center gap-1 text-foreground hover:text-primary-foreground transition-colors duration-300"
             >
               تواصل معنا
               <span className="text-primary text-lg">•</span>
             </Link>
             <Link
-              href="#"
+              href="/our-services"
               className="flex items-center gap-1 text-foreground hover:text-primary-foreground transition-colors duration-300"
             >
               خدماتنا
@@ -146,11 +201,11 @@ export default function Home() {
             variants={fadeIn}
             className="bg-gradient-to-br from-primary-foreground to-primary-foreground/90 relative p-8 md:p-16 flex flex-col items-center md:items-start justify-center min-h-[600px]"
           >
-            <div className="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
+            {/* <div className="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
               <button className="bg-white/10 backdrop-blur-sm p-2 rounded-full hover:bg-white/20 transition-colors duration-300">
                 <ChevronLeft className="h-6 w-6 text-white" />
               </button>
-            </div>
+            </div> */}
 
             <motion.div
               initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
@@ -192,7 +247,7 @@ export default function Home() {
                 className="flex flex-col md:flex-row items-center gap-4 mt-8"
               >
                 <Link
-                  href="#"
+                  href="/acheteur-interface"
                   className="bg-white hover:bg-gray-100 transition-colors duration-300 rounded-full px-8 py-3 text-foreground font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   <span>ابحث الآن</span>
@@ -223,7 +278,7 @@ export default function Home() {
           </motion.div>
 
           {/* Right Image */}
-          <div className="relative overflow-hidden">
+          {/* <div className="relative overflow-hidden">
             <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
               <button className="bg-white/10 backdrop-blur-sm p-2 rounded-full hover:bg-white/20 transition-colors duration-300">
                 <ChevronRight className="h-6 w-6 text-white" />
@@ -245,7 +300,50 @@ export default function Home() {
             </motion.div>
           </div>
         </div>
+      </section> */}
+
+<div className="relative overflow-hidden">
+  {/* Left button (now on the left side) */}
+  <div className="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
+    <button 
+      onClick={prevImage}
+      className="bg-white/10 backdrop-blur-sm p-2 rounded-full hover:bg-white/20 transition-colors duration-300"
+    >
+      <ChevronLeft className="h-6 w-6 text-white" />
+    </button>
+  </div>
+
+  {/* Right button */}
+  <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
+    <button 
+      onClick={nextImage}
+      className="bg-white/10 backdrop-blur-sm p-2 rounded-full hover:bg-white/20 transition-colors duration-300"
+    >
+      <ChevronRight className="h-6 w-6 text-white" />
+    </button>
+  </div>
+
+  {/* Updated Image with Carousel */}
+  <motion.div
+    key={currentImageIndex}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="w-full h-full"
+  >
+    <Image
+      src={images[currentImageIndex]}
+      alt="Sheep in field"
+      width={700}
+      height={500}
+      className="w-full h-full object-cover min-h-[600px]"
+    />
+  </motion.div>
+</div>
+        </div>
       </section>
+
+
 
       {/* Features Section */}
       <motion.section
@@ -387,7 +485,7 @@ export default function Home() {
                 </p>
                 <div>
                   <Link
-                    href="#"
+                    href="/acheteur-interface"
                     className="bg-primary-foreground text-white rounded-full px-8 py-3 inline-flex items-center gap-2 shadow-lg hover:shadow-xl hover:bg-primary-foreground/90 transition-all duration-300 transform hover:-translate-y-1"
                   >
                     <span>استكشف الآن</span>
@@ -415,7 +513,7 @@ export default function Home() {
       </motion.section>
 
       {/* Testimonials Section */}
-      <motion.section
+      {/* <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.3 }}
@@ -481,7 +579,10 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* <div className="hidden md:flex items-center justify-center">
+
+
+
+            <div className="hidden md:flex items-center justify-center">
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -497,7 +598,9 @@ export default function Home() {
                   className="rounded-full"
                 />
               </motion.div>
-            </div> */}
+            </div> 
+
+
             <div className="hidden md:flex items-center justify-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -519,7 +622,103 @@ export default function Home() {
 
           </div>
         </div>
+      </motion.section> */}
+
+
+
+<motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={fadeIn}
+        className="py-20 bg-background"
+      >
+       <div className="container mx-auto">
+  <div className="flex justify-between items-center mb-12">
+    <div className="flex items-center gap-2">
+      <span className="w-1 h-6 bg-primary-foreground rounded-full"></span>
+      <h2 className="text-2xl font-bold">آراء زبائننا</h2>
+    </div>
+    <div className="flex gap-2">
+      <button 
+        onClick={prevTestimonial}
+        className="border border-muted-foreground/20 hover:border-muted-foreground/40 rounded-full p-2 transition-colors duration-300"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <button 
+        onClick={nextTestimonial}
+        className="border border-muted-foreground/20 hover:border-muted-foreground/40 rounded-full p-2 transition-colors duration-300"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <motion.div
+      key={currentTestimonialIndex}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+      className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100"
+    >
+      <div className="flex mb-4">
+        {[...Array(5)].map((_, i) => (
+          <Star 
+            key={i}
+            className={`h-5 w-5 ${i < testimonials[currentTestimonialIndex].stars ? 'fill-primary text-primary' : 'text-primary'}`}
+          />
+        ))}
+      </div>
+      <blockquote className="text-xl font-medium mb-8 leading-relaxed">
+        "{testimonials[currentTestimonialIndex].quote}"
+      </blockquote>
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <Image
+            src={`${testimonials[currentTestimonialIndex].avatar}?height=60&width=60`}
+            alt="Customer"
+            width={60}
+            height={60}
+            className="rounded-full border-2 border-primary"
+          />
+          <span className="absolute -bottom-1 -right-1 bg-primary-foreground text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+            <Star className="h-3 w-3 fill-white" />
+          </span>
+        </div>
+        <div>
+          <p className="font-bold">{testimonials[currentTestimonialIndex].name}</p>
+          <p className="text-sm text-muted-foreground">
+            {testimonials[currentTestimonialIndex].role}
+          </p>
+        </div>
+      </div>
+    </motion.div>
+
+    <div className="hidden md:flex items-center justify-center">
+      <motion.div
+        key={currentTestimonialIndex}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8 }}
+        className="relative w-80 h-80 rounded-full overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 ring-4 ring-primary/50"
+      >
+        <Image
+          src={`${testimonials[currentTestimonialIndex].image}?height=320&width=320`}
+          alt="Testimonial Illustration"
+          width={320}
+          height={320}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10"></div>
+      </motion.div>
+    </div>
+  </div>
+</div>
       </motion.section>
+
+
 
       {/* Partners Section */}
       <motion.section
