@@ -3,17 +3,20 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Search, MapPin, Filter, List, Grid3X3, ChevronDown, Star, Check } from "lucide-react"
+import { Search, MapPin, Filter, List, Grid3X3, ChevronDown, Star, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import MapComponent from "@/components/MapComponent"
 
 export default function LandingPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [language, setLanguage] = useState<"fr" | "ar">("fr")
+
+  const [isMapOpen, setIsMapOpen] = useState(false)
 
   // Sample featured listings data
   const featuredListings = [
@@ -110,6 +113,13 @@ export default function LandingPage() {
                   {language === "fr" ? "Verifier SCN" : "تحقق من SCN"}
               </Button>
             </Link>
+
+
+            <Link href="/market-place">
+              <Button variant="outline" className="border-white bg-[#499471] text-white hover:bg-[#0b6d40]">
+                  {language === "fr" ? "Marketplace" : "البحث التقليدي"}
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -148,44 +158,94 @@ export default function LandingPage() {
         </div>
       </section>
 
+
       {/* Map Section */}
-      <section className="py-12 container mx-auto px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-[#0a5c36]">
-            {language === "fr" ? "Carte des prix par région" : "خريطة الأسعار حسب المنطقة"}
-          </h2>
-          <Button variant="outline" className="border-[#0a5c36] text-[#0a5c36]">
-            {language === "fr" ? "Voir en plein écran" : "عرض ملء الشاشة"}
-          </Button>
+{/* <section className="py-12 container mx-auto px-4">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-2xl font-bold text-[#0a5c36]">
+      {language === "fr" ? "Carte des prix par région" : "خريطة الأسعار حسب المنطقة"}
+    </h2>
+    <Button variant="outline" className="border-[#0a5c36] text-[#0a5c36]">
+      {language === "fr" ? "Voir en plein écran" : "عرض ملء الشاشة"}
+    </Button>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-md p-4 h-[400px] relative">
+    <div className="absolute inset-0 m-4 z-0">
+      <MapComponent />
+    </div>
+
+    <div className="absolute bottom-6 right-6 bg-white p-2 rounded-md shadow-md z-10">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-4 h-4 rounded-full bg-green-500"></div>
+        <span className="text-sm">{language === "fr" ? "Prix bas" : "سعر منخفض"}</span>
+      </div>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+        <span className="text-sm">{language === "fr" ? "Prix moyen" : "سعر متوسط"}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 rounded-full bg-red-500"></div>
+        <span className="text-sm">{language === "fr" ? "Prix élevé" : "سعر مرتفع"}</span>
+      </div>
+    </div>
+  </div>
+</section> */}
+
+
+<section className="py-12 container mx-auto px-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-[#0a5c36]">
+          {language === "fr" ? "Carte des prix par région" : "خريطة الأسعار حسب المنطقة"}
+        </h2>
+        <Button
+          variant="outline"
+          className="border-[#0a5c36] text-[#0a5c36]"
+          onClick={() => setIsMapOpen(true)}
+        >
+          {language === "fr" ? "Voir en plein écran" : "عرض ملء الشاشة"}
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-4 h-[400px] relative">
+        <div className="absolute inset-0 m-4 z-0">
+          <MapComponent />
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 h-[400px] relative">
-          <div className="absolute inset-0 m-4">
-            <Image
-              src="/placeholder.svg?height=400&width=800"
-              alt="Morocco Map"
-              layout="fill"
-              objectFit="contain"
-              className="rounded-lg"
-            />
+        <div className="absolute bottom-6 right-6 bg-white p-2 rounded-md shadow-md z-10">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 rounded-full bg-green-500"></div>
+            <span className="text-sm">{language === "fr" ? "Prix bas" : "سعر منخفض"}</span>
           </div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+            <span className="text-sm">{language === "fr" ? "Prix moyen" : "سعر متوسط"}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-red-500"></div>
+            <span className="text-sm">{language === "fr" ? "Prix élevé" : "سعر مرتفع"}</span>
+          </div>
+        </div>
+      </div>
 
-          <div className="absolute bottom-6 right-6 bg-white p-2 rounded-md shadow-md">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-4 h-4 rounded-full bg-green-500"></div>
-              <span className="text-sm">{language === "fr" ? "Prix bas" : "سعر منخفض"}</span>
-            </div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
-              <span className="text-sm">{language === "fr" ? "Prix moyen" : "سعر متوسط"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-red-500"></div>
-              <span className="text-sm">{language === "fr" ? "Prix élevé" : "سعر مرتفع"}</span>
+      {/* Modal */}
+      {isMapOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+          <div className="bg-white w-full h-full relative p-4">
+            <button
+              onClick={() => setIsMapOpen(false)}
+              className="absolute top-4 right-4 z-50 bg-gray-200 p-2 rounded-full"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+            <div className="w-full h-full rounded-lg overflow-hidden">
+              <MapComponent />
             </div>
           </div>
         </div>
-      </section>
+      )}
+    </section>
+
 
       {/* Quick Filters */}
       <section className="container mx-auto px-4 mb-12">
