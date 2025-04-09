@@ -68,7 +68,7 @@ export default function Home() {
       name: "محمد أحمد",
       role: "مزارع",
       quote: "خدمة ممتازة وسهولة في التعامل مع المنصة!",
-      image: "/male1.jpg",
+      image: "/femal1.jpg",
       avatar: "/performance-review.png",
       stars: 5
     },
@@ -77,7 +77,7 @@ export default function Home() {
       name: "محمد عالي",
       role: "مزارع",
       quote: "خدمة ممتازة وسهولة في التعامل مع المنصة!",
-      image: "/male1.jpg",
+      image: "/femal1.jpg",
       avatar: "/performance-review.png",
       stars: 5
     }
