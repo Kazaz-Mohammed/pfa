@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -11,12 +11,12 @@ import {
   Package,
   Plus,
   Search,
-  Settings,
   Users,
   Cog,
   Edit,
   Trash2,
   MoreVertical,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,13 +55,23 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useToast } from "@/components/ui/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 type Language = "fr" | "ar"
 type ViewMode = "grid" | "table"
 type SheepStatus = "active" | "inactive" | "sold"
 
 interface Sheep {
-  id: number
+  id: string
   scnId: string
   title: string
   breed: string
@@ -75,100 +85,288 @@ interface Sheep {
   image: string
 }
 
-// Sample data
-const sheepData: Sheep[] = [
-  {
-    id: 1,
-    scnId: "SCN-12345-MA",
-    title: "Sardi Male - 1.5 years",
-    breed: "Sardi",
-    gender: "Male",
-    age: "1.5 years",
-    weight: "65 kg",
-    price: 4200,
-    status: "active",
-    location: "Meknès",
-    createdAt: "2023-10-15",
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 2,
-    scnId: "SCN-12346-MA",
-    title: "Timahdite Female - 2 years",
-    breed: "Timahdite",
-    gender: "Female",
-    age: "2 years",
-    weight: "55 kg",
-    price: 3800,
-    status: "active",
-    location: "Fès",
-    createdAt: "2023-10-12",
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 3,
-    scnId: "SCN-12347-MA",
-    title: "D'man Male - 1 year",
-    breed: "D'man",
-    gender: "Male",
-    age: "1 year",
-    weight: "45 kg",
-    price: 2900,
-    status: "active",
-    location: "Marrakech",
-    createdAt: "2023-10-10",
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 4,
-    scnId: "SCN-12348-MA",
-    title: "Beni Guil Male - 1 year",
-    breed: "Beni Guil",
-    gender: "Male",
-    age: "1 year",
-    weight: "50 kg",
-    price: 3200,
-    status: "inactive",
-    location: "Oujda",
-    createdAt: "2023-10-08",
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 5,
-    scnId: "SCN-12349-MA",
-    title: "Sardi Female - 3 years",
-    breed: "Sardi",
-    gender: "Female",
-    age: "3 years",
-    weight: "70 kg",
-    price: 4500,
-    status: "active",
-    location: "Rabat",
-    createdAt: "2023-10-05",
-    image: "/placeholder.svg?height=80&width=80",
-  },
-]
-
 export default function SheepManagement() {
   const [language, setLanguage] = useState<Language>("fr")
   const [view, setView] = useState<ViewMode>("table")
   const [searchQuery, setSearchQuery] = useState("")
   const [filterBreed, setFilterBreed] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
-
-  const filteredSheep = sheepData.filter((sheep) => {
-    const matchesSearch = sheep.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          sheep.scnId.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesBreed = filterBreed === "all" || sheep.breed === filterBreed
-    const matchesStatus = filterStatus === "all" || sheep.status === filterStatus
-    
-    return matchesSearch && matchesBreed && matchesStatus
+  const [sheepData, setSheepData] = useState<Sheep[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [editingSheep, setEditingSheep] = useState<Sheep | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    breed: "",
+    gender: "",
+    age: "",
+    weight: "",
+    price: 0,
+    status: "active" as SheepStatus,
+    location: "",
   })
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [newSheepData, setNewSheepData] = useState({
+    title: "",
+    breed: "Sardi",
+    gender: "Male",
+    age: "",
+    weight: "",
+    price: 0, // Make sure this is a valid number, not NaN
+    status: "active" as SheepStatus,
+    location: "",
+  })
+  
+  const { toast } = useToast()
+
+  // Fetch sheep data from API
+  const fetchSheepData = async () => {
+    setIsLoading(true)
+    try {
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('search', searchQuery)
+      if (filterBreed !== 'all') params.append('breed', filterBreed)
+      if (filterStatus !== 'all') params.append('status', filterStatus)
+      
+      const response = await fetch(`/api/sheep?${params.toString()}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error details:', errorData)
+        throw new Error('Failed to fetch sheep data')
+      }
+      
+      const data = await response.json()
+      
+      // Ensure all sheep records have valid image URLs
+      const processedData = data.map((sheep: any) => ({
+        ...sheep,
+        image: sheep.image || "/placeholder.svg?height=80&width=80",
+        title: sheep.title || "Unknown Sheep",
+      }))
+      
+      setSheepData(processedData)
+      setTotalPages(Math.ceil(processedData.length / 10))
+    } catch (error) {
+      console.error('Error fetching sheep data:', error)
+      toast({
+        title: language === "fr" ? "Erreur" : "خطأ",
+        description: language === "fr" 
+          ? "Impossible de charger les données des moutons" 
+          : "تعذر تحميل بيانات الأغنام",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch data on initial load and when filters change
+  useEffect(() => {
+    // Add a small debounce for search to avoid too many API calls
+    const timer = setTimeout(() => {
+      fetchSheepData()
+    }, 300)
+    
+    return () => clearTimeout(timer)
+  }, [searchQuery, filterBreed, filterStatus])
 
   const getStatusText = (status: SheepStatus): string => {
     if (status === 'active') return language === "fr" ? "Actif" : "نشط"
     if (status === 'inactive') return language === "fr" ? "Inactif" : "غير نشط"
     return language === "fr" ? "Vendu" : "تم بيعه"
+  }
+
+  // Calculate pagination
+  const itemsPerPage = 10
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSheep = sheepData.slice(startIndex, endIndex)
+
+  // Handle edit sheep
+  const handleEditSheep = (sheep: Sheep) => {
+    setEditingSheep(sheep)
+    setFormData({
+      title: sheep.title,
+      breed: sheep.breed,
+      gender: sheep.gender,
+      age: sheep.age,
+      weight: sheep.weight,
+      price: sheep.price,
+      status: sheep.status,
+      location: sheep.location,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "price" ? parseFloat(value) : value
+    }))
+  }
+
+  // Handle form submission
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!editingSheep) return
+    
+    try {
+      setIsLoading(true)
+      
+      const response = await fetch(`/api/sheep/${editingSheep.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update sheep')
+      }
+      
+      // Close dialog and refresh data
+      setIsEditDialogOpen(false)
+      fetchSheepData()
+      
+      toast({
+        title: language === "fr" ? "Succès" : "نجاح",
+        description: language === "fr" 
+          ? "Mouton mis à jour avec succès" 
+          : "تم تحديث الخروف بنجاح",
+      })
+    } catch (error) {
+      console.error('Error updating sheep:', error)
+      toast({
+        title: language === "fr" ? "Erreur" : "خطأ",
+        description: language === "fr" 
+          ? "Impossible de mettre à jour le mouton" 
+          : "تعذر تحديث الخروف",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle delete sheep
+  const handleDeleteSheep = async (id: string) => {
+    if (confirm(language === "fr" 
+      ? "Êtes-vous sûr de vouloir supprimer ce mouton ?" 
+      : "هل أنت متأكد من رغبتك في حذف هذا الخروف؟")) {
+      try {
+        const response = await fetch(`/api/sheep/${id}`, {
+          method: 'DELETE',
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete sheep')
+        }
+        
+        // Refresh data
+        fetchSheepData()
+        
+        toast({
+          title: language === "fr" ? "Succès" : "نجاح",
+          description: language === "fr" 
+            ? "Mouton supprimé avec succès" 
+            : "تم حذف الخروف بنجاح",
+        })
+      } catch (error) {
+        console.error('Error deleting sheep:', error)
+        toast({
+          title: language === "fr" ? "Erreur" : "خطأ",
+          description: language === "fr" 
+            ? "Impossible de supprimer le mouton" 
+            : "تعذر حذف الخروف",
+          variant: "destructive"
+        })
+      }
+    }
+  }
+
+  // Add this function to handle input changes for the new sheep form
+  const handleNewSheepInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    
+    // Handle price specially to avoid NaN
+    if (name === "price") {
+      // If the value is empty, set it to 0 or empty string
+      const numValue = value === "" ? 0 : parseFloat(value)
+      // Make sure we don't set NaN as a value
+      setNewSheepData(prev => ({
+        ...prev,
+        [name]: isNaN(numValue) ? 0 : numValue
+      }))
+    } else {
+      // For non-numeric fields, just set the value directly
+      setNewSheepData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+  }
+
+  // Add this function to handle form submission
+  const handleAddSheep = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      setIsLoading(true)
+      
+      const response = await fetch('/api/sheep', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newSheepData),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to add sheep')
+      }
+      
+      // Reset form and close dialog
+      setNewSheepData({
+        title: "",
+        breed: "Sardi",
+        gender: "Male",
+        age: "",
+        weight: "",
+        price: 0,
+        status: "active" as SheepStatus,
+        location: "",
+      })
+      setIsAddDialogOpen(false)
+      
+      // Refresh data
+      fetchSheepData()
+      
+      toast({
+        title: language === "fr" ? "Succès" : "نجاح",
+        description: language === "fr" 
+          ? "Mouton ajouté avec succès" 
+          : "تمت إضافة الخروف بنجاح",
+      })
+    } catch (error) {
+      console.error('Error adding sheep:', error)
+      toast({
+        title: language === "fr" ? "Erreur" : "خطأ",
+        description: language === "fr" 
+          ? "Impossible d'ajouter le mouton" 
+          : "تعذر إضافة الخروف",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -251,7 +449,10 @@ export default function SheepManagement() {
               </p>
             </div>
 
-            <Button className="bg-[#0a5c36] hover:bg-[#0b6d40]">
+            <Button 
+              className="bg-[#0a5c36] hover:bg-[#0b6d40]"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
               <Plus className="mr-2 h-5 w-5" />
               {language === "fr" ? "Ajouter un mouton" : "إضافة خروف"}
             </Button>
@@ -277,7 +478,7 @@ export default function SheepManagement() {
                       <SelectValue placeholder={language === "fr" ? "Race" : "السلالة"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{language === "fr" ? "Toutes les races" : "جميع السلالات"}</SelectItem>
+                    <SelectItem value="all">{language === "fr" ? "Toutes les races" : "جميع السلالات"}</SelectItem>
                       <SelectItem value="Sardi">Sardi</SelectItem>
                       <SelectItem value="Timahdite">Timahdite</SelectItem>
                       <SelectItem value="D'man">D'man</SelectItem>
@@ -297,7 +498,7 @@ export default function SheepManagement() {
                     </SelectContent>
                   </Select>
 
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" onClick={fetchSheepData}>
                     <Filter className="h-4 w-4" />
                   </Button>
                 </div>
@@ -331,7 +532,20 @@ export default function SheepManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              {view === "table" ? (
+              {isLoading ? (
+                <div className="flex justify-center items-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#0a5c36]" />
+                  <span className="ml-2 text-[#0a5c36]">
+                    {language === "fr" ? "Chargement..." : "جاري التحميل..."}
+                  </span>
+                </div>
+              ) : sheepData.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">
+                  {language === "fr" 
+                    ? "Aucun mouton trouvé. Ajoutez un mouton ou modifiez vos filtres." 
+                    : "لم يتم العثور على أي خروف. أضف خروفًا أو عدل المرشحات."}
+                </div>
+              ) : view === "table" ? (
                 <div className="rounded-md border overflow-auto">
                   <Table>
                     <TableHeader>
@@ -347,13 +561,13 @@ export default function SheepManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSheep.map((sheep) => (
+                      {paginatedSheep.map((sheep) => (
                         <TableRow key={sheep.id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                               <Image 
-                                src={sheep.image} 
-                                alt={sheep.title} 
+                                src={sheep.image || "/placeholder.svg?height=80&width=80"} 
+                                alt={sheep.title || "Sheep"} 
                                 width={40} 
                                 height={40} 
                                 className="rounded-md object-cover"
@@ -385,7 +599,7 @@ export default function SheepManagement() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditSheep(sheep)}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   <span>{language === "fr" ? "Modifier" : "تعديل"}</span>
                                 </DropdownMenuItem>
@@ -394,7 +608,10 @@ export default function SheepManagement() {
                                   <span>{language === "fr" ? "Voir SCN" : "عرض SCN"}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => handleDeleteSheep(sheep.id)}
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   <span>{language === "fr" ? "Supprimer" : "حذف"}</span>
                                 </DropdownMenuItem>
@@ -408,7 +625,7 @@ export default function SheepManagement() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                  {filteredSheep.map((sheep) => (
+                  {paginatedSheep.map((sheep) => (
                     <Card key={sheep.id} className="overflow-hidden h-full flex flex-col">
                       <div className="relative h-48 w-full">
                         <Image
@@ -458,7 +675,7 @@ export default function SheepManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditSheep(sheep)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>{language === "fr" ? "Modifier" : "تعديل"}</span>
                               </DropdownMenuItem>
@@ -467,7 +684,10 @@ export default function SheepManagement() {
                                 <span>{language === "fr" ? "Voir SCN" : "عرض SCN"}</span>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => handleDeleteSheep(sheep.id)}
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 <span>{language === "fr" ? "Supprimer" : "حذف"}</span>
                               </DropdownMenuItem>
@@ -481,32 +701,349 @@ export default function SheepManagement() {
               )}
 
               {/* Pagination */}
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious href="#" />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#" isActive>1</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#">2</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationLink href="#">3</PaginationLink>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext href="#" />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              {!isLoading && sheepData.length > 0 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink 
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </CardContent>
           </Card>
         </main>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "fr" ? "Modifier le mouton" : "تعديل الخروف"}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "fr" 
+                ? "Modifiez les détails du mouton ci-dessous." 
+                : "قم بتعديل تفاصيل الخروف أدناه."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitEdit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  {language === "fr" ? "Titre" : "العنوان"}
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="breed" className="text-right">
+                  {language === "fr" ? "Race" : "السلالة"}
+                </Label>
+                <Select 
+                  name="breed" 
+                  value={formData.breed} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, breed: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                  <SelectItem value="Sardi">Sardi</SelectItem>
+                    <SelectItem value="Timahdite">Timahdite</SelectItem>
+                    <SelectItem value="D'man">D'man</SelectItem>
+                    <SelectItem value="Beni Guil">Beni Guil</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gender" className="text-right">
+                  {language === "fr" ? "Sexe" : "الجنس"}
+                </Label>
+                <Select 
+                  name="gender" 
+                  value={formData.gender} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">{language === "fr" ? "Mâle" : "ذكر"}</SelectItem>
+                    <SelectItem value="Female">{language === "fr" ? "Femelle" : "أنثى"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="age" className="text-right">
+                  {language === "fr" ? "Âge" : "العمر"}
+                </Label>
+                <Input
+                  id="age"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="weight" className="text-right">
+                  {language === "fr" ? "Poids" : "الوزن"}
+                </Label>
+                <Input
+                  id="weight"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="price" className="text-right">
+                  {language === "fr" ? "Prix" : "السعر"}
+                </Label>
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  {language === "fr" ? "Statut" : "الحالة"}
+                </Label>
+                <Select 
+                  name="status" 
+                  value={formData.status} 
+                  onValueChange={(value: SheepStatus) => setFormData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{language === "fr" ? "Actif" : "نشط"}</SelectItem>
+                    <SelectItem value="inactive">{language === "fr" ? "Inactif" : "غير نشط"}</SelectItem>
+                    <SelectItem value="sold">{language === "fr" ? "Vendu" : "تم بيعه"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="location" className="text-right">
+                  {language === "fr" ? "Lieu" : "الموقع"}
+                </Label>
+                <Input
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                {language === "fr" ? "Annuler" : "إلغاء"}
+              </Button>
+              <Button type="submit" className="bg-[#0a5c36] hover:bg-[#0b6d40]">
+                {language === "fr" ? "Enregistrer" : "حفظ"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sheep Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "fr" ? "Ajouter un mouton" : "إضافة خروف"}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "fr" 
+                ? "Remplissez les détails du nouveau mouton ci-dessous." 
+                : "املأ تفاصيل الخروف الجديد أدناه."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddSheep}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-title" className="text-right">
+                  {language === "fr" ? "Titre" : "العنوان"}
+                </Label>
+                <Input
+                  id="new-title"
+                  name="title"
+                  value={newSheepData.title}
+                  onChange={handleNewSheepInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-breed" className="text-right">
+                  {language === "fr" ? "Race" : "السلالة"}
+                </Label>
+                <Select 
+                  name="breed" 
+                  value={newSheepData.breed} 
+                  onValueChange={(value) => setNewSheepData(prev => ({ ...prev, breed: value }))}
+                >
+                  <SelectTrigger className="col-span-3" id="new-breed">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sardi">Sardi</SelectItem>
+                    <SelectItem value="Timahdite">Timahdite</SelectItem>
+                    <SelectItem value="D'man">D'man</SelectItem>
+                    <SelectItem value="Beni Guil">Beni Guil</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-gender" className="text-right">
+                  {language === "fr" ? "Sexe" : "الجنس"}
+                </Label>
+                <Select 
+                  name="gender" 
+                  value={newSheepData.gender} 
+                  onValueChange={(value) => setNewSheepData(prev => ({ ...prev, gender: value }))}
+                >
+                  <SelectTrigger className="col-span-3" id="new-gender">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">{language === "fr" ? "Mâle" : "ذكر"}</SelectItem>
+                    <SelectItem value="Female">{language === "fr" ? "Femelle" : "أنثى"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-age" className="text-right">
+                  {language === "fr" ? "Âge" : "العمر"}
+                </Label>
+                <Input
+                  id="new-age"
+                  name="age"
+                  placeholder="1.5 years"
+                  value={newSheepData.age}
+                  onChange={handleNewSheepInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-weight" className="text-right">
+                  {language === "fr" ? "Poids" : "الوزن"}
+                </Label>
+                <Input
+                  id="new-weight"
+                  name="weight"
+                  placeholder="65 kg"
+                  value={newSheepData.weight}
+                  onChange={handleNewSheepInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-price" className="text-right">
+                  {language === "fr" ? "Prix" : "السعر"}
+                </Label>
+                <Input
+                  id="new-price"
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={newSheepData.price === 0 && newSheepData.price !== 0 ? "" : newSheepData.price.toString()}
+                  onChange={handleNewSheepInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-status" className="text-right">
+                  {language === "fr" ? "Statut" : "الحالة"}
+                </Label>
+                <Select 
+                  name="status" 
+                  value={newSheepData.status} 
+                  onValueChange={(value: SheepStatus) => setNewSheepData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="col-span-3" id="new-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{language === "fr" ? "Actif" : "نشط"}</SelectItem>
+                    <SelectItem value="inactive">{language === "fr" ? "Inactif" : "غير نشط"}</SelectItem>
+                    <SelectItem value="sold">{language === "fr" ? "Vendu" : "تم بيعه"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-location" className="text-right">
+                  {language === "fr" ? "Lieu" : "الموقع"}
+                </Label>
+                <Input
+                  id="new-location"
+                  name="location"
+                  value={newSheepData.location}
+                  onChange={handleNewSheepInputChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                {language === "fr" ? "Annuler" : "إلغاء"}
+              </Button>
+              <Button type="submit" className="bg-[#0a5c36] hover:bg-[#0b6d40]">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {language === "fr" ? "Ajout en cours..." : "جاري الإضافة..."}
+                  </>
+                ) : (
+                  language === "fr" ? "Ajouter" : "إضافة"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -44,13 +44,184 @@ import {
   ChartYAxis,
   ChartArea,
 } from "@/components/ui/chart"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 import * as RechartsPrimitive from 'recharts'
+
+// Helper function to parse sheep name
+function parseSheepName(name: string | undefined) {
+  // Handle undefined or null name
+  if (!name) {
+    return "Unknown Sheep"
+  }
+  
+  // Try to extract breed from [Breed]|Gender|Title pattern
+  const fullMatch = name.match(/\[(.*?)\]\|(.*?)\|(.*)/)
+  if (fullMatch && fullMatch.length >= 4) {
+    const breed = fullMatch[1]
+    const gender = fullMatch[2]
+    return `${breed} ${gender}`
+  }
+  
+  // Try to extract from [Breed]|Title pattern
+  const breedMatch = name.match(/\[(.*?)\]\|(.*)/)
+  if (breedMatch && breedMatch.length >= 3) {
+    const breed = breedMatch[1]
+    return breed
+  }
+  
+  // Try to extract breed from [Breed] pattern (original format)
+  const oldBreedMatch = name.match(/\[(.*?)\]/)
+  if (oldBreedMatch && oldBreedMatch.length >= 2) {
+    const breed = oldBreedMatch[1]
+    return breed
+  }
+  
+  // Try to extract gender (Male/Female)
+  const hasMale = name.includes("|Male|") || name.toLowerCase().includes("male")
+  const hasFemale = name.includes("|Female|") || name.toLowerCase().includes("female")
+  const gender = hasMale ? "Male" : hasFemale ? "Female" : ""
+  
+  // Check for known breeds in the name
+  const knownBreeds = ["Sardi", "Timahdite", "D'man", "Beni Guil"]
+  let breed = ""
+  for (const knownBreed of knownBreeds) {
+    if (name.includes(knownBreed)) {
+      breed = knownBreed
+      break
+    }
+  }
+  
+  // If we have both breed and gender, format nicely
+  if (breed && gender) {
+    return `${breed} ${gender}`
+  }
+  
+  // If we have just breed
+  if (breed) {
+    return breed
+  }
+  
+  // Fallback to original name
+  return name
+}
 
 export default function SellerDashboard() {
   const [language, setLanguage] = useState<"fr" | "ar">("fr")
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [latestSheep, setLatestSheep] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [sheepFormOpen, setSheepFormOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
+  const [formData, setFormData] = useState({
+    name: "",
+    breed: "Sardi",
+    gender: "Male",
+    age: "",
+    weight: "",
+    region: "",
+    price: "",
+    available: true,
+    description: ""
+  })
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      // Prepare data for API
+      const apiData = {
+        title: formData.name,
+        breed: formData.breed,
+        gender: formData.gender,
+        age: formData.age,
+        weight: formData.weight,
+        location: formData.region,
+        price: parseFloat(formData.price),
+        status: formData.available ? "active" : "inactive"
+      }
+
+      const response = await fetch('/api/sheep', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add sheep')
+      }
+
+      toast({
+        title: language === "fr" ? "Mouton ajouté avec succès" : "تمت إضافة الخروف بنجاح",
+        description: language === "fr" ? "Le mouton a été ajouté à votre inventaire" : "تمت إضافة الخروف إلى مخزونك",
+      })
+
+      // Reset form and close dialog
+      setFormData({
+        name: "",
+        breed: "Sardi",
+        gender: "Male",
+        age: "",
+        weight: "",
+        region: "",
+        price: "",
+        available: true,
+        description: ""
+      })
+      setSheepFormOpen(false)
+      
+      // Refresh sheep list
+      fetchLatestSheep()
+    } catch (error) {
+      console.error('Error adding sheep:', error)
+      toast({
+        variant: "destructive",
+        title: language === "fr" ? "Erreur" : "خطأ",
+        description: language === "fr" ? "Impossible d'ajouter le mouton" : "تعذر إضافة الخروف",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Function to fetch latest sheep
+  const fetchLatestSheep = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/sheep?status=active&limit=3')
+      if (!response.ok) {
+        throw new Error('Failed to fetch sheep data')
+      }
+      const data = await response.json()
+      setLatestSheep(data)
+    } catch (error) {
+      console.error('Error fetching latest sheep:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Use the fetchLatestSheep function in useEffect
+  useEffect(() => {
+    fetchLatestSheep()
+  }, [])
   
   // Sample data for dashboard
   const stats = {
@@ -92,33 +263,6 @@ export default function SellerDashboard() {
       date: "2023-11-13",
       status: "new",
       message: "Can you provide more information about the vaccination history of this sheep?",
-    },
-  ]
-
-  const popularListings = [
-    {
-      id: 1,
-      title: "Sardi Male - Premium Quality",
-      image: "/she.jpg?height=100&width=100",
-      price: 4200,
-      views: 320,
-      inquiries: 15,
-    },
-    {
-      id: 2,
-      title: "Timahdite Female - Breeding",
-      image: "/she.jpg?height=100&width=100",
-      price: 3800,
-      views: 280,
-      inquiries: 12,
-    },
-    {
-      id: 3,
-      title: "D'man Male - Young",
-      image: "/she.jpg?height=100&width=100",
-      price: 2900,
-      views: 210,
-      inquiries: 8,
     },
   ]
 
@@ -219,7 +363,7 @@ export default function SellerDashboard() {
               href="/messages"
               className="flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-[#0b6d40]"
             >
-              <MessageSquare className="h-5 w-5" />
+                           <MessageSquare className="h-5 w-5" />
               {sidebarOpen && (
                 <div className="flex items-center justify-between w-full">
                   <span>{language === "fr" ? "Messages" : "الرسائل"}</span>
@@ -236,22 +380,6 @@ export default function SellerDashboard() {
               <BarChart3 className="h-5 w-5" />
               {sidebarOpen && <span>{language === "fr" ? "Analytique" : "التحليلات"}</span>}
             </Link>
-
-            {/* <Link
-              href="/business-tools"
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-[#0b6d40]"
-            >
-              <Wallet className="h-5 w-5" />
-              {sidebarOpen && <span>{language === "fr" ? "Outils d'affaires" : "أدوات الأعمال"}</span>}
-            </Link> */}
-
-            {/* <Link
-              href="/profile"
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-[#0b6d40]"
-            >
-              <Users className="h-5 w-5" />
-              {sidebarOpen && <span>{language === "fr" ? "Profil" : "الملف الشخصي"}</span>}
-            </Link> */}
 
             <Link
               href="/learning"
@@ -372,14 +500,6 @@ export default function SellerDashboard() {
               </CardContent>
             </Card>
 
-            {/* <Card>
-              <CardContent className="p-4 flex flex-col items-center justify-center">
-                <Wallet className="h-8 w-8 text-[#0a5c36] mb-2" />
-                <p className="text-sm text-gray-500">{language === "fr" ? "Revenus (MAD)" : "الإيرادات (درهم)"}</p>
-                <h3 className="text-2xl font-bold">{stats.revenue.toLocaleString()}</h3>
-              </CardContent>
-            </Card> */}
-
             <Card>
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <Tag className="h-8 w-8 text-[#0a5c36] mb-2" />
@@ -391,7 +511,7 @@ export default function SellerDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Market Trends */}
-            {/* <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle>{language === "fr" ? "Tendances du marché" : "اتجاهات السوق"}</CardTitle>
                 <CardDescription>
@@ -400,63 +520,51 @@ export default function SellerDashboard() {
                     : "متوسط أسعار الأغنام خلال الـ 12 شهرًا الماضية"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[300px] relative overflow-hidden">
                 <ChartContainer
+                  config={{
+                    price: {
+                      label: "Sheep Price",
+                      color: "#0a5c36"
+                    }
+                  }}
                   data={marketTrends}
                   xAxisKey="month"
                   yAxisKey="value"
-                  margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                  className="w-full h-full"
                 >
-                  <ChartXAxis />
-                  <ChartYAxis />
-                  <ChartLine name="Average Price" dataKey="price" stroke="#0a5c36" strokeWidth={2} />
-                  <ChartArea dataKey="price" fill="#0a5c36" fillOpacity={0.2} stroke="#0a5c36" strokeWidth={2} />
-                  <ChartTooltip>
-                    <ChartTooltipContent />
-                  </ChartTooltip>
+                  <RechartsPrimitive.ResponsiveContainer 
+                    width="100%" 
+                    height="100%" 
+                    minHeight={200}
+                  >
+                    <RechartsPrimitive.LineChart 
+                      data={marketTrends}
+                      margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                    >
+                      <RechartsPrimitive.XAxis 
+                        dataKey="month" 
+                        tick={{ fontSize: 12 }}
+                        tickMargin={5}
+                      />
+                      <RechartsPrimitive.YAxis 
+                        tick={{ fontSize: 12 }}
+                        width={40}
+                      />
+                      <RechartsPrimitive.Tooltip />
+                      <RechartsPrimitive.Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        stroke="#0a5c36" 
+                        strokeWidth={2} 
+                      />
+                      <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
+                    </RechartsPrimitive.LineChart>
+                  </RechartsPrimitive.ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
-            </Card> */}
-
-<Card className="lg:col-span-2">
-  <CardHeader className="pb-2">
-    <CardTitle>{language === "fr" ? "Tendances du marché" : "اتجاهات السوق"}</CardTitle>
-    <CardDescription>
-      {language === "fr"
-        ? "Prix moyen des moutons au cours des 12 derniers mois"
-        : "متوسط أسعار الأغنام خلال الـ 12 شهرًا الماضية"}
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="h-[300px]">
-    <ChartContainer
-      config={{
-        price: {
-          label: "Sheep Price",
-          color: "#0a5c36"
-        }
-      }}
-      data={marketTrends}
-      xAxisKey="month"
-      yAxisKey="value"
-      margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
-    >
-      <RechartsPrimitive.ResponsiveContainer>
-        <RechartsPrimitive.LineChart data={marketTrends}>
-          <RechartsPrimitive.XAxis dataKey="month" />
-          <RechartsPrimitive.YAxis />
-          <RechartsPrimitive.Tooltip />
-          <RechartsPrimitive.Line 
-            type="monotone" 
-            dataKey="price" 
-            stroke="#0a5c36" 
-            strokeWidth={2} 
-          />
-          <RechartsPrimitive.CartesianGrid strokeDasharray="3 3" />
-        </RechartsPrimitive.LineChart>
-      </RechartsPrimitive.ResponsiveContainer>
-    </ChartContainer>
-  </CardContent>
-</Card>
+            </Card>
 
             {/* Sales by Breed */}
             <Card>
@@ -541,45 +649,58 @@ export default function SellerDashboard() {
               </CardContent>
             </Card>
 
-            {/* Popular Listings */}
+            {/* Latest Active Sheep Listings */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle>{language === "fr" ? "Annonces populaires" : "الإعلانات الشائعة"}</CardTitle>
+                <CardTitle>{language === "fr" ? "Dernières annonces" : "أحدث الإعلانات"}</CardTitle>
+                
                 <CardDescription>
-                  {language === "fr" ? "Vos annonces les plus consultées" : "إعلاناتك الأكثر مشاهدة"}
+                  {language === "fr" ? "Vos annonces les plus récentes" : "إعلاناتك الأحدث"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {popularListings.map((listing) => (
-                    <div key={listing.id} className="flex gap-3 p-3 rounded-lg bg-gray-50">
-                      <Image
-                        src={listing.image || "/placeholder.svg"}
-                        alt={listing.title}
-                        width={60}
-                        height={60}
-                        className="rounded-md object-cover"
-                      />
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <p>{language === "fr" ? "Chargement..." : "جار التحميل..."}</p>
+                  </div>
+                ) : latestSheep.length === 0 ? (
+                  <div className="flex justify-center items-center h-40">
+                    <p>{language === "fr" ? "Aucune annonce trouvée" : "لم يتم العثور على إعلانات"}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {latestSheep.map((sheep) => (
+                      <div key={sheep.id} className="flex gap-3 p-3 rounded-lg bg-gray-50">
+                        <Image
+                          src={sheep.image_url || "/she.jpg"}
+                          alt={parseSheepName(sheep.name)}
+                          width={60}
+                          height={60}
+                          className="rounded-md object-cover"
+                        />
 
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm mb-1">{listing.title}</h4>
-                        <p className="text-[#0a5c36] font-bold">{listing.price} MAD</p>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm mb-1">{parseSheepName(sheep.name)}</h4>
+                          <p className="text-[#0a5c36] font-bold">{sheep.price} MAD</p>
 
-                        <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
-                          <span>
-                            {listing.views} {language === "fr" ? "vues" : "مشاهدة"}
-                          </span>
-                          <span>
-                            {listing.inquiries} {language === "fr" ? "demandes" : "استفسار"}
-                          </span>
+                          <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
+                            <span>
+                              {sheep.region}
+                            </span>
+                            <span>
+                              {new Date(sheep.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 <Button variant="link" className="mt-4 w-full text-[#0a5c36]">
-                  {language === "fr" ? "Voir toutes les annonces" : "عرض جميع الإعلانات"}
+                  <Link href="/sheep-management">
+                    {language === "fr" ? "Voir toutes les annonces" : "عرض جميع الإعلانات"}
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -590,7 +711,10 @@ export default function SellerDashboard() {
             <h2 className="text-lg font-semibold mb-4">{language === "fr" ? "Actions rapides" : "إجراءات سريعة"}</h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button className="bg-[#0a5c36] hover:bg-[#0b6d40] h-auto py-4 flex flex-col items-center">
+              <Button 
+                className="bg-[#0a5c36] hover:bg-[#0b6d40] h-auto py-4 flex flex-col items-center"
+                onClick={() => setSheepFormOpen(true)}
+              >
                 <Plus className="h-6 w-6 mb-2" />
                 <span>{language === "fr" ? "Ajouter un mouton" : "إضافة خروف"}</span>
               </Button>
@@ -613,7 +737,184 @@ export default function SellerDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Sheep Form Dialog */}
+      <Dialog open={sheepFormOpen} onOpenChange={setSheepFormOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "fr" ? "Ajouter un mouton" : "إضافة خروف"}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "fr" 
+                ? "Remplissez les détails pour ajouter un nouveau mouton à votre inventaire" 
+                : "املأ التفاصيل لإضافة خروف جديد إلى مخزونك"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="breed">
+                    {language === "fr" ? "Race" : "السلالة"}
+                  </Label>
+                  <Select 
+                    value={formData.breed} 
+                    onValueChange={(value) => handleSelectChange("breed", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === "fr" ? "Sélectionner une race" : "اختر السلالة"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sardi">Sardi</SelectItem>
+                      <SelectItem value="Timahdite">Timahdite</SelectItem>
+                      <SelectItem value="D'man">D'man</SelectItem>
+                      <SelectItem value="Beni Guil">Beni Guil</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">
+                    {language === "fr" ? "Genre" : "الجنس"}
+                  </Label>
+                  <Select 
+                    value={formData.gender} 
+                    onValueChange={(value) => handleSelectChange("gender", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={language === "fr" ? "Sélectionner un genre" : "اختر الجنس"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">{language === "fr" ? "Mâle" : "ذكر"}</SelectItem>
+                      <SelectItem value="Female">{language === "fr" ? "Femelle" : "أنثى"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  {language === "fr" ? "Titre/Nom" : "العنوان/الاسم"}
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder={language === "fr" ? "Titre descriptif" : "عنوان وصفي"}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="age">
+                    {language === "fr" ? "Âge (années)" : "العمر (سنوات)"}
+                  </Label>
+                  <Input
+                    id="age"
+                    name="age"
+                    type="number"
+                    step="0.1"
+                    value={formData.age}
+                    onChange={handleChange}
+                    placeholder="1.5"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="weight">
+                    {language === "fr" ? "Poids (kg)" : "الوزن (كجم)"}
+                  </Label>
+                  <Input
+                    id="weight"
+                    name="weight"
+                    type="number"
+                    step="0.1"
+                    value={formData.weight}
+                    onChange={handleChange}
+                    placeholder="65"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="region">
+                  {language === "fr" ? "Région" : "المنطقة"}
+                </Label>
+                <Select 
+                  value={formData.region} 
+                  onValueChange={(value) => handleSelectChange("region", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={language === "fr" ? "Sélectionner une région" : "اختر المنطقة"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Casablanca">Casablanca</SelectItem>
+                    <SelectItem value="Rabat">Rabat</SelectItem>
+                    <SelectItem value="Marrakech">Marrakech</SelectItem>
+                    <SelectItem value="Fes">Fes</SelectItem>
+                    <SelectItem value="Tangier">Tangier</SelectItem>
+                    <SelectItem value="Agadir">Agadir</SelectItem>
+                    <SelectItem value="Meknes">Meknes</SelectItem>
+                    <SelectItem value="Oujda">Oujda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="price">
+                  {language === "fr" ? "Prix (MAD)" : "السعر (درهم)"}
+                </Label>
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder="3500"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  {language === "fr" ? "Description" : "الوصف"}
+                </Label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder={language === "fr" ? "Description détaillée" : "وصف مفصل"}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setSheepFormOpen(false)}
+                disabled={isSubmitting}
+              >
+                {language === "fr" ? "Annuler" : "إلغاء"}
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-[#0a5c36] hover:bg-[#0b6d40]"
+                disabled={isSubmitting}
+              >
+                {isSubmitting 
+                  ? (language === "fr" ? "Ajout en cours..." : "جاري الإضافة...") 
+                  : (language === "fr" ? "Ajouter" : "إضافة")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
